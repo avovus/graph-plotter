@@ -7,13 +7,15 @@
 #include <vector>
 #include <SDL2/SDL_ttf.h>
 #include <cmath>
+//#include <boost/spirit/include/qi.hpp>
 using namespace std;
 
 // Задаем параметры окна
-const int WINDOW_WIDTH = 1600;
-const int WINDOW_HEIGHT = 1200;
+int WINDOW_WIDTH = 800;
+int WINDOW_HEIGHT = 600;
 TTF_Font* font = NULL;
 vector <float> odds {1,0,0,0,0};
+SDL_DisplayMode mode;
 
 
 SDL_Texture* createTextTexture(SDL_Renderer* renderer, const std::string& text, SDL_Color color)
@@ -298,6 +300,16 @@ int main(int argc, char* args[])
         return -1;
     }
 
+    //изменение масштабов окна, в зависимости от разрешения экрана
+    if (SDL_GetCurrentDisplayMode(0, &mode) == 0){
+        WINDOW_WIDTH = mode.w/2 + 2*(mode.w/10);
+        WINDOW_HEIGHT = mode.h/2 + 2*(mode.h/10);
+    }
+    else{
+        SDL_Log("SDL_GetDisplayMode failed: %s", SDL_GetError());
+        return -1;
+    }
+
     // Создание окна
     SDL_Window* window = SDL_CreateWindow("Graph Plotter", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
     if (window == nullptr) {
@@ -325,7 +337,6 @@ int main(int argc, char* args[])
         std::cout << "Failed to load font. TTF Error: " << TTF_GetError() << std::endl;
         return false;
     }
-
 
     // Основной цикл программы
     float scale = 50;
@@ -640,7 +651,7 @@ int main(int argc, char* args[])
                 n = 0;
             //}
             n++;
-            SDL_Delay(50);
+            SDL_Delay(10);
             //отчищаем экран
             SDL_RenderClear(renderer);
             needUpdate = false;
