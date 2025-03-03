@@ -92,13 +92,10 @@ string removeZero(double num){
 }
 
 // Функция для рисования графика
-void drawGraph(SDL_Renderer* renderer, float(*function)(float,int), float endX, float step, int scale,int type)
+void drawGraph(SDL_Renderer* renderer, float(*function)(float,int), float endX, float step, int scale,int type, int offsetX = WINDOW_WIDTH / 2, int offsetY = WINDOW_HEIGHT / 2)
 {
     
     //расчитываем смещение
-    int offsetX = WINDOW_WIDTH / 2;
-    int offsetY = WINDOW_HEIGHT / 2;
-
     // Очищаем экран
 //    SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
 //    SDL_RenderClear(renderer);
@@ -127,8 +124,8 @@ void drawGraph(SDL_Renderer* renderer, float(*function)(float,int), float endX, 
 
         if((abs(x-xp)<endX && abs(y-yp)<endX)){
             SDL_RenderDrawLine(renderer,static_cast<int>(xp*scale) + offsetX,static_cast<int>(yp*scale) + offsetY,static_cast<int>(x*scale) + offsetX,static_cast<int>(y*scale) + offsetY);
+            //SDL_RenderDrawPoint(renderer, static_cast<int>(x*scale) + offsetX, static_cast<int>(y*scale)+ offsetY);
         }
-        //SDL_RenderDrawPoint(renderer, static_cast<int>(x*scale) + offsetX, static_cast<int>(y*scale)+ offsetY);
         yp = y;
         xp = x;
     }
@@ -182,12 +179,10 @@ void drawGraph(SDL_Renderer* renderer, float(*function)(float,int), float endX, 
 
 }
 
-void drawCL(SDL_Renderer* renderer, float endX, int scale)
+void drawCL(SDL_Renderer* renderer, float endX, int scale, int offsetX = WINDOW_WIDTH / 2, int offsetY = WINDOW_HEIGHT / 2)
 {
     float step = 1.0;
     //расчитываем смещение
-    int offsetX = WINDOW_WIDTH / 2;
-    int offsetY = WINDOW_HEIGHT / 2;
 
     // Задаем цвет линии графика
     
@@ -229,6 +224,24 @@ void drawCL(SDL_Renderer* renderer, float endX, int scale)
         SDL_RenderDrawRect(renderer, &pointRect);
         //SDL_RenderFillRect(renderer, &pointRect);
     }
+}
+
+void drawConsole(SDL_Renderer* renderer){
+    SDL_SetRenderDrawColor(renderer, 15, 15, 15, 0);
+    SDL_Rect terminalRect = {0,WINDOW_HEIGHT-WINDOW_HEIGHT/6, WINDOW_WIDTH, WINDOW_HEIGHT/6};
+    SDL_RenderDrawRect(renderer, &terminalRect);
+    SDL_RenderFillRect(renderer, &terminalRect);
+    SDL_SetRenderDrawColor(renderer, 25, 25, 25, 0);
+    SDL_Rect upperRect = {0,WINDOW_HEIGHT-WINDOW_HEIGHT/6, WINDOW_WIDTH, WINDOW_HEIGHT/24};
+    SDL_RenderDrawRect(renderer, &upperRect);
+    SDL_RenderFillRect(renderer, &upperRect);
+
+    SDL_SetRenderDrawColor(renderer, 45, 45, 60, 0);
+    SDL_RenderDrawLine(renderer,0,WINDOW_HEIGHT-WINDOW_HEIGHT/6,WINDOW_WIDTH,WINDOW_HEIGHT-WINDOW_HEIGHT/6);
+
+    SDL_SetRenderDrawColor(renderer, 40, 40, 50, 0);
+    SDL_RenderDrawLine(renderer,0,WINDOW_HEIGHT-WINDOW_HEIGHT/6+WINDOW_HEIGHT/24,WINDOW_WIDTH,WINDOW_HEIGHT-WINDOW_HEIGHT/6+WINDOW_HEIGHT/24);
+
 }
 
 float customFunction(float x, int t)
@@ -331,7 +344,7 @@ int main(int argc, char* args[])
     }
 
     
-    font = TTF_OpenFont("Stengazeta-Regular_5.ttf", 38);
+    font = TTF_OpenFont("Stengazeta-Regular_5.ttf", 30);
     if (font == NULL)
     {
         std::cout << "Failed to load font. TTF Error: " << TTF_GetError() << std::endl;
@@ -342,15 +355,18 @@ int main(int argc, char* args[])
     float scale = 50;
     float num = 1;
     int type = 1;
+    int maxOffset = 70;
     bool needUpdate = false;
+    bool leftMouseButtonDown = false;
     int n = 3;
+    int xoffset = WINDOW_WIDTH/2; int yoffset = WINDOW_HEIGHT/2;
 
     SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
     SDL_Delay(10);
     //отчищаем экран
     SDL_RenderClear(renderer);
     SDL_Color textColor = { 255, 255, 255 };
-    SDL_Color textModeColor = { 255, 255, 255 };
+    SDL_Color textModeColor = { 200, 200, 200 };
 
     bool enterMode = false;
     string text = "нажимайте от 1 до 9 для выбора типа графика";
@@ -361,8 +377,6 @@ int main(int argc, char* args[])
     renderText(renderer,textTexture.mTexture, 40,40);
 
     SDL_Texture* inputTextTexture = createTextTexture(renderer,inputText, textColor);
-    renderText(renderer,inputTextTexture, WINDOW_WIDTH - 200, WINDOW_HEIGHT - 100);//инпут текс текстуре не трогать
-
     //MenuTexture inputTextTexture = tf(font, inputText, renderer, textColor);
     //renderText(renderer,inputTextTexture.mTexture, WINDOW_WIDTH - 200,WINDOW_HEIGHT - 100);
 
@@ -378,11 +392,47 @@ int main(int argc, char* args[])
             }
             if(event.type == SDL_TEXTINPUT && enterMode){
                 inputText += event.text.text;
-                cout << inputText << endl;
+                //textModeColor = { 200, 200, 200 };
+                //textMode = "режим ввода";
+                //cout << inputText << endl;
+            }
+            if(event.type == SDL_MOUSEBUTTONDOWN){
+                // Проверяем, что нажата ЛКМ
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    leftMouseButtonDown = true;
+                }
+            }
+
+            if(event.type == SDL_MOUSEBUTTONUP){
+                // Проверяем, что отпущена ЛКМ
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    leftMouseButtonDown = false;
+                }
+            }
+            if(event.type == SDL_MOUSEMOTION){
+                if(leftMouseButtonDown){
+                    if((event.motion.xrel < 0 && xoffset <= (-2*maxOffset+100)*scale) || (event.motion.xrel > 0 && xoffset >= (2*maxOffset)*scale) || (event.motion.yrel < 0 && yoffset <= (-2*maxOffset+50)*scale) || (event.motion.yrel > 0 && yoffset >= (2*maxOffset-50)*scale)){
+
+                    }
+                    else{
+                        xoffset+=event.motion.xrel;
+                        yoffset += event.motion.yrel;
+                    }
+                }
+            }
+            if( event.type == SDL_MOUSEWHEEL){
+                if ((event.wheel.y > 0 && scale <= 200) || (event.wheel.y < 0 && scale >= 15)) {
+                    scale += event.wheel.y;
+                }
+                //} else if (event.wheel.y < 0) {
+                    //std::cout << "Колесико прокручено вниз" << std::endl;
+                //}            
             }
             if (event.type == SDL_KEYDOWN) {
+                //cout << scale << endl;
                 needUpdate = true;
                 switch (event.key.keysym.sym) {
+                    /*
                     case SDLK_UP:{
                         if(scale >= 100){
                             num = 2;
@@ -418,13 +468,21 @@ int main(int argc, char* args[])
                         }
                         break;
                     }
-                   case SDLK_RETURN:
+                    case SDLK_RIGHT:{
+                        xoffset -= 10;
+                        break;
+                    }
+                    case SDLK_LEFT:{
+                        xoffset += 10;
+                        break;
+                    }
+                    */
+                    case SDLK_RETURN:
                     {if(enterMode){
                             stringstream s1;
                             int u; double p;
                             s1 << inputText;
                             s1 >> u >> p;
-                            cout << "int index = " << u << ", double coefficient = " << p << endl;
                             inputText = " ";
 
                             /*
@@ -433,15 +491,19 @@ int main(int argc, char* args[])
                             */
                             if(odds.size() >= u){
                                 odds[u-1] = p;
-                                textModeColor = { 255, 255, 255 };
+                                textModeColor = { 200, 200, 200 };
                                 textMode = "нажмите ENTER для выбора коэффицента";
                             }
                             else{
-                                textModeColor = { 155, 0, 0 };
-                                textMode = "☠ОШИБКА☠ Выбран неверный номер коэффицента";
+                                //textModeColor = { 155, 0, 0 };
+                                textMode = "нажмите ENTER для выбора коэффицента";
                             }
                             needUpdate = true;
                             //inputText = "tap ENTER for choose coefficient";
+                        }
+                        else{
+                            //textModeColor = { 200, 200, 200 };
+                            textMode = "режим ввода";
                         }
                         enterMode = !enterMode;
                         break;
@@ -618,18 +680,18 @@ int main(int argc, char* args[])
 
             // Рисуем график по запросу пользователя
             //if(n >= 3|| needUpdate){
-                drawCL(renderer, 100.0,scale);
-                drawGraph(renderer, customFunction, 130.0, 0.01,scale,type);//работает даже со step = 0.001 без лагов благодаря оптимизации!
+                drawCL(renderer, 2*maxOffset+50,scale, xoffset, yoffset);
+                drawGraph(renderer, customFunction, 2*maxOffset+20, 0.05,scale,type, xoffset, yoffset);//работает даже со step = 0.001 без лагов благодаря оптимизации!
+                drawConsole(renderer);
+                //
                 MenuTexture textTexture = tf(font, text, renderer, textColor);
                 renderText(renderer,textTexture.mTexture, 40,40);
-                if(!enterMode){
-                    MenuTexture textTextureMode = tf(font, textMode, renderer, textModeColor);
-                    renderText(renderer,textTextureMode.mTexture, WINDOW_WIDTH - 750,WINDOW_HEIGHT - 100);
-                }
-                else{
+                MenuTexture textTextureMode = tf(font, textMode, renderer, textModeColor);
+                renderText(renderer,textTextureMode.mTexture, WINDOW_WIDTH-textTextureMode.w-20,WINDOW_HEIGHT-WINDOW_HEIGHT/6+10);
+                if(enterMode){
                     inputTextTexture = createTextTexture(renderer,inputText, textColor);
                     //inputTextTexture = tf(font, inputText, renderer, textColor);
-                    renderText(renderer,inputTextTexture, WINDOW_WIDTH - 750,WINDOW_HEIGHT - 100);
+                    renderText(renderer,inputTextTexture, 0+20, WINDOW_HEIGHT-WINDOW_HEIGHT/6+WINDOW_HEIGHT/24+25);
                 }
                 
                 /*
@@ -651,7 +713,7 @@ int main(int argc, char* args[])
                 n = 0;
             //}
             n++;
-            SDL_Delay(10);
+            SDL_Delay(1);
             //отчищаем экран
             SDL_RenderClear(renderer);
             needUpdate = false;
